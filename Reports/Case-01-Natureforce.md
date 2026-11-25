@@ -47,13 +47,16 @@ Checking Wireshark's Protocol Hierarchy and TCP Conversations showed that 85.5% 
 ### Payload Extraction and Verification
 NetworkMiner v3.2 was used to profile the internal workstation (`10.10.1.128`) and extract the Kerberos username (`bdiaz`). However, NetworkMiner's Files tab did not carve the malicious executable, likely because the transfer happened over non-standard TCP port `9000`. Checking Wireshark's `File -> Export Objects -> HTTP` immediately revealed `runner_ilove.exe` at Packet `24916`.
 
-![HTTP Payload Export](../Images/Case-01/01_http_payload_export.png) 
-*Figure 2: Wireshark HTTP Object Export showing `runner_ilove.exe` downloaded from `107.175.82.242:9000` at Packet 24916.*
+<div>
+  <img src="../Images/Case-01/01_http_payload_export.png" alt="HTTP Payload Export">
+</div>
 
+*Figure 2: Wireshark HTTP Object Export showing `runner_ilove.exe` downloaded from `107.175.82.242:9000` at Packet 24916.* 
 
+<br>
 Calculating the SHA-256 hash of `runner_ilove.exe` and checking it on VirusTotal confirmed it as malicious, with 41/60 security vendors flagging it under `trojan.capdoor/zusy` and RAT/backdoor families.
 
-![VirusTotal Detection](../Images/Case-01/02_virustotal_detection.png)<br>
+![VirusTotal Detection](../Images/Case-01/02_virustotal_detection.png)
 *Figure 3: VirusTotal analysis of `runner_ilove.exe` confirming 41/60 malicious detections.*
 
 ### Tracing Initial Access
