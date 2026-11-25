@@ -23,7 +23,8 @@ On October 1, 2026, a Windows workstation (`DESKTOP-4VGYQX7`, IP `10.10.1.128`) 
 | **Windows Username** | `bdiaz` |
 | **Operating System** | Windows |
 
-![Infected Host and User Profile](../Images/Case-01/03_host_user_profile.png)
+![Infected Host and User Profile](../Images/Case-01/03_host_user_profile.png) 
+*Figure 1: Infected host profile (`10.10.1.128`, `DESKTOP-4VGYQX7`) and Kerberos username (`bdiaz`) in NetworkMiner.*
 
 ---
 
@@ -46,21 +47,26 @@ Checking Wireshark's Protocol Hierarchy and TCP Conversations showed that 85.5% 
 ### Payload Extraction and Verification
 NetworkMiner v3.2 was used to profile the internal workstation (`10.10.1.128`) and extract the Kerberos username (`bdiaz`). However, NetworkMiner's Files tab did not carve the malicious executable, likely because the transfer happened over non-standard TCP port `9000`. Checking Wireshark's `File -> Export Objects -> HTTP` immediately revealed `runner_ilove.exe` at Packet `24916`.
 
-![HTTP Payload Export](../Images/Case-01/01_http_payload_export.png)
+![HTTP Payload Export](../Images/Case-01/01_http_payload_export.png) 
+*Figure 2: Wireshark HTTP Object Export showing `runner_ilove.exe` downloaded from `107.175.82.242:9000` at Packet 24916.*
+
 
 Calculating the SHA-256 hash of `runner_ilove.exe` and checking it on VirusTotal confirmed it as malicious, with 41/60 security vendors flagging it under `trojan.capdoor/zusy` and RAT/backdoor families.
 
-![VirusTotal Detection](../Images/Case-01/02_virustotal_detection.png)
+![VirusTotal Detection](../Images/Case-01/02_virustotal_detection.png)<br>
+*Figure 3: VirusTotal analysis of `runner_ilove.exe` confirming 41/60 malicious detections.*
 
 ### Tracing Initial Access
 After finding `runner_ilove.exe` at Packet `24916` via HTTP Object Export, filtering for `http.request.uri contains "runner_ilove.exe"` located the initial `GET` request at Packet `23091` (`19:30:36Z`). To see what triggered the download, outbound HTTP and TLS Client Hello traffic from `10.10.1.128` was filtered up to that point (`frame.number < 23092`), keeping Packet `23091` as the bottom reference row. Aside from standard Microsoft and Google background traffic, the only third-party site visited was `holtandberyl[.]com` (`35[.]170[.]55[.]9`) at `19:29:00Z`, 96 seconds before `curl/8.21.0` downloaded the payload.
 
 ![Initial Access Chain](../Images/Case-01/04_initial_access_holtandberyl.png)
+*Figure 4: Outbound web activity linking `holtandberyl.com` (`19:29:00Z`) to the `runner_ilove.exe` download (`19:30:36Z`).*
 
 ### Command and Control (C2) Traffic
 Filtering for the remaining 14 MB external IP (`ip.addr == 195.63.128.106`) showed a persistent session starting at `19:30:44Z`, six seconds after `runner_ilove.exe` finished downloading. There was no DNS lookup for this IP, and the stream lacked a normal TLS Client Hello. Wireshark misclassified the raw encrypted traffic as `SSLv2`, which is consistent with a custom encrypted C2 channel running on port `443` to blend in with HTTPS traffic.
 
 ![C2 Communication](../Images/Case-01/05_c2_communication.png)
+*Figure 5: Post-infection C2 session to `195.63.128.106:443` starting at `19:30:44Z` with non-standard encrypted traffic labeled as `SSLv2`.*
 
 ### Post-Infection Scoping
 Traffic from `10.10.1.128` after Packet `24916` (`19:30:38Z`) was checked for secondary C2 servers, non-standard outbound ports, and internal lateral movement (`SMB2`, `LDAP`, `DCE/RPC`) across the `10.10.1.0/24` subnet. No other malicious external connections or lateral movement attempts were found during the capture window.
